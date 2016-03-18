@@ -4,15 +4,17 @@ $(() => {
 
 	ws.onmessage = msg => {
 		const data = JSON.parse(msg.data);
-		console.log("reset", data.reset);
 		if (data.reset) {
-			// resetTimer()
+			clock.setTime(clockSeconds, function () {
+				clock.start();
+			});
 		}
 	};
 
 	const $button = $("button");
 	const clockSeconds = 600;
 	const resetTimer = () => {
+		console.log(clock.getTime().time);
 		ws.send(message);
 		clock.setTime(clockSeconds, function () {
 			clock.start();

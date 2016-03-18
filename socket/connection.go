@@ -1,6 +1,7 @@
 package socket
 
 import (
+	"io"
 	"log"
 
 	"golang.org/x/net/websocket"
@@ -13,7 +14,10 @@ type ResetJSON struct {
 
 const channelBuffSize = 100
 
-var id int
+var (
+	id           int
+	resetCounter int
+)
 
 // Connection contains client information.
 type Connection struct {
@@ -36,11 +40,7 @@ func NewConnection(ws *websocket.Conn, server *Server) *Connection {
 	}
 }
 
-// Conn connects socket
-func (c *Connection) Conn() *websocket.Conn {
-	return c.ws
-}
-
+// Write sends the message to the connection channel
 func (c *Connection) Write(msg *ResetJSON) {
 	select {
 	case c.ch <- msg:
@@ -62,7 +62,7 @@ func (c *Connection) listenWrite() {
 
 		// send reset to the connection
 		case msg := <-c.ch:
-			log.Println("Reset")
+			log.Println("reset: ", resetCounter)
 			websocket.JSON.Send(c.ws, msg)
 
 		// receive done request
@@ -88,8 +88,13 @@ func (c *Connection) listenRead() {
 		// read data from websocket connection
 		default:
 			var msg ResetJSON
-			websocket.JSON.Receive(c.ws, &msg)
-			c.server.send(&msg)
+			err := websocket.JSON.Receive(c.ws, &msg)
+			if err == io.EOF {
+				c.doneCh <- true
+			} else {
+				resetCounter++
+				c.server.send(&msg)
+			}
 		}
 	}
 }
