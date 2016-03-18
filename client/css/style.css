@@ -1,0 +1,35 @@
+/*MAIN STYLE*/
+body, .flip-clock-divider .flip-clock-label {
+  color: #C1C1C1;
+}
+
+body {
+  background: #242424;
+}
+
+.container {
+  width: 550px;
+  margin: 0 auto;
+}
+
+/*HEADER*/
+header h1 {
+  display: inline-block;
+}
+
+img {
+  width: 100px;
+  padding-bottom: 30px;
+}
+
+/*CLOCK*/
+.your-clock {
+  margin-top: 50px !important;
+  margin-bottom: 50px !important;
+}
+
+/*FOOTER*/
+footer h4 {
+  display: none;
+  margin-left: 50px;
+}
