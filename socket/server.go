@@ -3,6 +3,7 @@ package socket
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
@@ -13,8 +14,10 @@ type Server struct {
 	connections map[int]*Connection
 	addCh       chan *Connection
 	delCh       chan *Connection
-	sendCh      chan *ResetJSON
+	sendCh      chan *Message
 	doneCh      chan bool
+	time        time.Time
+	gameOver    bool
 }
 
 // NewServer creates a new socket server.
@@ -24,12 +27,15 @@ func NewServer(path string) *Server {
 		make(map[int]*Connection),
 		make(chan *Connection),
 		make(chan *Connection),
-		make(chan *ResetJSON),
+		make(chan *Message),
 		make(chan bool),
+		time.Now(),
+		false,
 	}
 }
 
-func (s *Server) send(msg *ResetJSON) {
+//sends messages to all connections
+func (s *Server) send(msg *Message) {
 	for _, c := range s.connections {
 		c.Write(msg)
 	}
@@ -60,8 +66,12 @@ func (s *Server) Listen() {
 		// Add new connection
 		case c := <-s.addCh:
 			log.Println("Added new connection")
+			var gameOver bool
+			if s.gameOver {
+				gameOver = true
+			}
+			c.ch <- &Message{gameOver, s.time}
 			s.connections[c.id] = c
-			// s.sendPastMessages(c)
 
 		// del a connection
 		case c := <-s.delCh:

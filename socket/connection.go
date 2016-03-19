@@ -3,13 +3,15 @@ package socket
 import (
 	"io"
 	"log"
+	"time"
 
 	"golang.org/x/net/websocket"
 )
 
-// ResetJSON sends true to restart the clock
-type ResetJSON struct {
-	Reset bool `json:"reset"`
+// Message sends true to restart the clock
+type Message struct {
+	GameOver bool      `json:"gameOver"`
+	Time     time.Time `json:"time"`
 }
 
 const channelBuffSize = 100
@@ -24,7 +26,7 @@ type Connection struct {
 	id     int
 	ws     *websocket.Conn
 	server *Server
-	ch     chan *ResetJSON
+	ch     chan *Message
 	doneCh chan bool
 }
 
@@ -35,13 +37,13 @@ func NewConnection(ws *websocket.Conn, server *Server) *Connection {
 		id,
 		ws,
 		server,
-		make(chan *ResetJSON, channelBuffSize),
+		make(chan *Message, channelBuffSize),
 		make(chan bool),
 	}
 }
 
 // Write sends the message to the connection channel
-func (c *Connection) Write(msg *ResetJSON) {
+func (c *Connection) Write(msg *Message) {
 	select {
 	case c.ch <- msg:
 	default:
@@ -62,7 +64,6 @@ func (c *Connection) listenWrite() {
 
 		// send reset to the connection
 		case msg := <-c.ch:
-			log.Println("reset: ", resetCounter)
 			websocket.JSON.Send(c.ws, msg)
 
 		// receive done request
@@ -87,12 +88,20 @@ func (c *Connection) listenRead() {
 
 		// read data from websocket connection
 		default:
-			var msg ResetJSON
+			var msg Message
 			err := websocket.JSON.Receive(c.ws, &msg)
 			if err == io.EOF {
 				c.doneCh <- true
+			} else if msg.GameOver && !c.server.gameOver {
+				log.Println("Game Over")
+				c.server.gameOver = true
+				c.doneCh <- true
 			} else {
 				resetCounter++
+				log.Println("Reset count: ", resetCounter)
+				time := time.Now()
+				c.server.time = time
+				msg.Time = c.server.time
 				c.server.send(&msg)
 			}
 		}
