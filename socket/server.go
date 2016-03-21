@@ -66,11 +66,7 @@ func (s *Server) Listen() {
 		// Add new connection
 		case c := <-s.addCh:
 			log.Println("Added new connection")
-			var gameOver bool
-			if s.gameOver {
-				gameOver = true
-			}
-			c.ch <- &Message{gameOver, s.time}
+			c.ch <- &Message{s.gameOver, s.time}
 			s.connections[c.id] = c
 
 		// del a connection
